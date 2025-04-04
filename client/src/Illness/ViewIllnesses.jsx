@@ -1,181 +1,224 @@
-import { useState, useEffect, useContext } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import AuthContext from "../context/AuthContext";
-import axios from 'axios';
-// import Header from "../components/Header";
+import { useState, useEffect, useContext } from "react"; 
+import { useParams, useNavigate, Link } from "react-router-dom"; 
+import AuthContext from "../context/AuthContext"; 
+import axios from 'axios'; 
 
-const ViewIllnesses = () => {
-  const { user_id } = useParams();
-  const { authTokens, user } = useContext(AuthContext);
-  const navigate = useNavigate();
-  
-  const [illnesses, setIllnesses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const ViewIllnesses = () => { 
+  const { patient_id } = useParams(); 
+  const { authTokens, user } = useContext(AuthContext); 
+  const navigate = useNavigate(); 
 
-  useEffect(() => {
-    const fetchIllnesses = async () => {
-      try {
-        const response = await axios.get(
-          `http://localhost:8000/user/illness/patient/${user.user_id}/`,
-          {
-            headers: {
-              Authorization: `Bearer ${authTokens.access}`,
-            },
-          }
-        );
-        setIllnesses(response.data);
-      } catch (err) {
-        setError(err.response?.data?.error || "Failed to load illness records");
-        console.error("Error fetching illnesses:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [illnesses, setIllnesses] = useState([]); 
+  const [physicians, setPhysicians] = useState({}); 
+  const [loading, setLoading] = useState(true); 
+  const [error, setError] = useState(null); 
+  const [searchTerm, setSearchTerm] = useState(""); 
 
-    fetchIllnesses();
-  }, [user.user_id, authTokens.access]);
+  useEffect(() => { 
+    const fetchIllnesses = async () => { 
+      try { 
+        const illnessResponse = await axios.get( 
+         ` http://localhost:8000/user/patients/${user.user_id}/illnesses/`, 
+          { 
+            headers: { 
+              Authorization: `Bearer ${authTokens.access}`, 
+            }, 
+          } 
+        ); 
+        // console.log("Illness Response:", illnessResponse.data); 
 
-  const handleDelete = async (illnessId) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
-    
-    try {
-      await axios.delete(
-        `http://localhost:8000/user/illness/${illnessId}/`,
-        {
-          headers: {
-            Authorization: `Bearer ${authTokens.access}`,
-          },
+        const illnessesData = illnessResponse.data; 
+
+        // Now, fetch physicians data based on physician_id from illnesses 
+        const physicianIds = [...new Set(illnessesData.map(illness => illness.physician))]; 
+        
+        if (physicianIds.length > 0) {
+          const physicianPromises = physicianIds.map(id =>  
+            axios.get(`http://localhost:8000/user/physician/${id}/`, { 
+              headers: { 
+                Authorization: `Bearer ${authTokens.access}`, 
+              }, 
+            }) 
+          ); 
+
+          const physicianResponses = await Promise.all(physicianPromises); 
+
+          // Store physician details in state, keyed by physician_id 
+          const physiciansData = physicianResponses.reduce((acc, response) => { 
+            const physician = response.data; 
+            acc[physician.id] = physician; 
+            return acc; 
+          }, {}); 
+          // console.log("Physician data: ", physiciansData.undefined); 
+
+          // Set illnesses and physicians in state 
+          setPhysicians(physiciansData); 
         }
-      );
-      setIllnesses(illnesses.filter(illness => illness.id !== illnessId));
-    } catch (err) {
-      setError(err.response?.data?.error || "Failed to delete record");
-      console.error("Error deleting illness:", err);
-    }
-  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* <Header /> */}
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-lg font-medium text-gray-700">Loading illness records...</p>
-        </div>
-      </div>
-    );
-  }
+        setIllnesses(illnessesData); 
+      } catch (err) { 
+        setError(err.response?.data?.detail ||  
+                err.response?.data?.message ||  
+                "Failed to load illness records. Please try again."); 
+        console.error("Error fetching illnesses:", err); 
+      } finally { 
+        setLoading(false); 
+      } 
+    }; 
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* <Header /> */}
-        <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-xl shadow-md overflow-hidden p-6 sm:p-8 text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    fetchIllnesses(); 
+  }, [user.user_id, authTokens.access]); 
+
+  const filteredIllnesses = illnesses.filter(illness =>  
+    illness.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    illness.description.toLowerCase().includes(searchTerm.toLowerCase()) 
+  ); 
+
+  if (loading) { 
+    return ( 
+      <div className="flex justify-center items-center min-h-screen"> 
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div> 
+      </div> 
+    ); 
+  } 
+
+  if (error) { 
+    return ( 
+      <div className="max-w-4xl mx-auto p-4"> 
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded"> 
+          <div className="flex items-center"> 
+            <div className="flex-shrink-0"> 
+              <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"> 
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /> 
+              </svg> 
+            </div> 
+            <div className="ml-3"> 
+              <p className="text-sm text-red-700">{error}</p> 
+              <button 
+                onClick={() => window.location.reload()}
+
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800">Reload</button>
+                </div> 
+              </div> 
+            </div> 
+          </div> 
+        ); 
+      }
+    
+      if (filteredIllnesses.length === 0) {
+        return (
+          <div className="max-w-4xl mx-auto p-4">
+            <p>No illnesses found matching your search criteria.</p>
+          </div>
+        );
+      }
+    
+      return (
+     
+    <div className="max-w-6xl mx-auto p-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">
+          {user.user_id === parseInt(patient_id) ? "My Illness Records" : "Patient Illness Records"}
+        </h1>
+        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search records..."
+              className="pl-10 pr-4 py-2 border rounded-lg w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className="absolute left-3 top-2.5 text-gray-400">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h3 className="mt-3 text-lg font-medium text-gray-900">Error Loading Data</h3>
-            <p className="mt-2 text-sm text-gray-500">{error}</p>
-            <button
-              onClick={() => navigate(-1)}
-              className="mt-4 inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Go Back
-            </button>
           </div>
+          {user.user_id === parseInt(patient_id) && (
+            <Link
+              to="/create-illness"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium text-center"
+            >
+              Add New Record
+            </Link>
+          )}
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* <Header /> */}
-      
-      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">Medical Records</h1>
-                <p className="mt-1 text-gray-600">View and manage illness history</p>
-              </div>
-              <div className="mt-4 md:mt-0 space-x-3">
-                <Link
-                  to={`/create-illness`}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Add New Record
-                </Link>
-                <button
-                  onClick={() => navigate(-1)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Back
-                </button>
+      {filteredIllnesses.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h3 className="mt-2 text-lg font-medium text-gray-900">
+            {searchTerm ? "No matching records found" : "No illness records yet"}
+          </h3>
+          <p className="mt-1 text-gray-500">
+            {searchTerm 
+              ? "Try a different search term" 
+              : user.user_id === parseInt(patient_id) 
+                ? "Get started by adding your first record" 
+                : "This patient has no illness records yet"}
+          </p>
+          {user.user_id === parseInt(patient_id) && !searchTerm && (
+            <div className="mt-6">
+              <Link
+                to="/create-illness"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Add First Record
+              </Link>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredIllnesses.map((illness) => (
+            <div key={illness.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">{illness.title}</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {new Date(illness.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <div className="mt-3 sm:mt-0 flex space-x-3">
+                    <Link
+                      to={`/update_illness/${illness.id}`}
+                      state={{ illness }}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    >
+                      Edit
+                    </Link>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <p className="text-gray-700 whitespace-pre-wrap">{illness.description}</p>
+                </div>
+                {illness.physician && physicians[illness.physician] && (
+                  <div className="mt-4 border-t pt-4">
+                    <h4 className="text-sm font-semibold text-gray-900">Physician Details</h4>
+                    <p className="text-sm text-gray-700">
+                      {physicians[illness.physician].first_name} {physicians[illness.physician].last_name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {physicians[illness.physician].specialisation}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-
-          <div className="px-6 py-4">
-            {illnesses.length === 0 ? (
-              <div className="text-center py-12">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h3 className="mt-2 text-lg font-medium text-gray-900">No medical records found</h3>
-                <p className="mt-1 text-gray-500">Get started by creating a new illness record.</p>
-                <div className="mt-6">
-                  <Link
-                    to={`/create-illness`}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    Add New Record
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {illnesses.map((illness) => (
-                  <div key={illness.id} className="bg-gray-50 rounded-lg p-4 md:p-6">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">{illness.title}</h3>
-                        <p className="mt-1 text-gray-600">{new Date(illness.created_at).toLocaleDateString()}</p>
-                      </div>
-                      <div className="mt-4 md:mt-0 flex space-x-3">
-                        <Link
-                          to={`/update-illness/${illness.user_id}`}
-                          state={{ illness }}
-                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(illness.id)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <h4 className="text-sm font-medium text-gray-700">Details:</h4>
-                      <p className="mt-1 text-gray-600 whitespace-pre-wrap">{illness.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
-};
-
-export default ViewIllnesses;
+    };
+    
+    export default ViewIllnesses;

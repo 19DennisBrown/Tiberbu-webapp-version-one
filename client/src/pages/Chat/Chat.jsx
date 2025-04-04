@@ -3,25 +3,31 @@ import axios from 'axios';
 import AuthContext from '../../context/AuthContext';
 import PropTypes from 'prop-types';
 
-const Chat = ({ chatInfo, projectData }) => {
+const Chat = ({ chatInfo, patientData }) => {
   const { user, authTokens } = useContext(AuthContext);
   const [messages, setMessages] = useState([]);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sending, setSending] = useState(false);
-  const [supervisorID, setSupervisorID] = useState();
-  const [studentLeadID, setStudentLeadID] = useState();
+  const [physicianID, setPhysicianID] = useState();
+  const [patientID, setPatientID] = useState();
 
   useEffect(() => {
-    const supervisorIdFromChat = chatInfo?.supervisor?.user?.id;
-    const supervisorIdFromProject = projectData?.student_lead?.supervisor?.user_id;
-    const studentLeadIdFromChat = chatInfo?.user?.id;
-    const studentLeadIdFromProject = projectData?.student_lead?.user_id;
 
-    setSupervisorID(supervisorIdFromChat || supervisorIdFromProject);
-    setStudentLeadID(studentLeadIdFromChat || studentLeadIdFromProject);
-  }, [chatInfo, projectData]);
+    // Physician id options
+    const physicianIdFromChat = chatInfo?.supervisor?.user?.id;
+    const phycisianIdFromPatient = patientData?.patient?.physician?.user.id;
+
+    // patients id options
+    const patientIdFromChat = chatInfo;
+    const patientIdFromPatient = patientData?.patient?.user?.id;
+
+    // console.log("Fetching ChatInfo: ", ChatInfo )
+
+    setPhysicianID(physicianIdFromChat || phycisianIdFromPatient);
+    setPatientID(patientIdFromChat || patientIdFromPatient);
+  }, [chatInfo, patientData]);
 
   useEffect(() => {
     if (!user || !authTokens) {
@@ -30,23 +36,26 @@ const Chat = ({ chatInfo, projectData }) => {
       return;
     }
 
-    const student_lead_id = user.role === 'student' ? user.user_id : studentLeadID;
-    const supervisor_id = user.role === 'supervisor' ? user.user_id : supervisorID;
+    const patient_id = user.role === 'patient' ? user.user_id : patientID;
+    const physician_id = user.role === 'physician' ? user.user_id : physicianID;
 
-    if (!student_lead_id || !supervisor_id) {
+    if (!patient_id || !physician_id) {
       setLoading(false);
       return;
     }
 
     const fetchMessages = async () => {
       try {
-        const url = `http://localhost:8000/chat/chat_messages/${student_lead_id}/${supervisor_id}/`;
+        const url = `http://localhost:8000/chat/chat_messages/${patient_id}/${physician_id}/`;
         const response = await axios.get(url, {
           headers: {
             Authorization: `Bearer ${authTokens.access}`,
           },
         });
         setMessages(response.data);
+
+        // console.log("Chat Message data", response.data)
+        
       } catch (err) {
         setError(err.response?.data?.detail || err.message);
       } finally {
@@ -55,16 +64,16 @@ const Chat = ({ chatInfo, projectData }) => {
     };
 
     fetchMessages();
-  }, [user, authTokens, studentLeadID, supervisorID]);
+  }, [user, authTokens, patientID, physicianID]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!content || !user || !authTokens) return;
 
-    const student_lead_id = user.role === 'student' ? user.user_id : studentLeadID;
-    const supervisor_id = user.role === 'supervisor' ? user.user_id : supervisorID;
+    const patient_id = user.role === 'patient' ? user.user_id : patientID;
+    const physician_id = user.role === 'physician' ? user.user_id : physicianID;
 
-    if (!student_lead_id || !supervisor_id) {
+    if (!patient_id || !physician_id) {
       setError('Missing participant information.');
       return;
     }
@@ -75,8 +84,8 @@ const Chat = ({ chatInfo, projectData }) => {
       const response = await axios.post(
         'http://localhost:8000/chat/chat_messages/create/',
         {
-          student_lead: student_lead_id,
-          supervisor: supervisor_id,
+          patient: patient_id,
+          physician: physician_id,
           content: content,
         },
         {
@@ -96,12 +105,12 @@ const Chat = ({ chatInfo, projectData }) => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+    <div className="w-full mx-auto bg-white rounded-xl shadow-md overflow-hidden">
       {/* Chat Header */}
-      <div className="bg-gradient-to-r from-green-600 to-green-800 p-4 text-white">
+      <div className="bg-gradient-to-r from-green-500 to-green-900 p-4 text-white">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">
-            Chat with {user.role === 'student' ? 'Supervisor' : 'Student Lead'}
+            Chat with {user.role === 'patient' ? 'Doc' : 'Patient'}
           </h2>
           <div className="flex items-center space-x-2">
             <span className="inline-block w-3 h-3 bg-green-300 rounded-full animate-pulse"></span>
@@ -135,19 +144,19 @@ const Chat = ({ chatInfo, projectData }) => {
             {messages.map((message) => (
               <div 
                 key={message.id} 
-                className={`flex ${message.user?.role === 'student' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${message.user?.role === 'patient' ? 'justify-end' : 'justify-start'}`}
               >
                 <div 
-                  className={`max-w-xs md:max-w-md rounded-lg p-3 ${message.user?.role === 'student' 
+                  className={`max-w-xs md:max-w-md rounded-lg p-3 ${message.user?.role === 'patient' 
                     ? 'bg-green-100 rounded-tr-none' 
                     : 'bg-blue-100 rounded-tl-none'}`}
                 >
                   <p className="text-gray-800">{message.content}</p>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-gray-500">
-                      @{message.user?.username}
+                    <span className="text-xs text-gray-400 mr-1">
+                      @{message.user?.username} 
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-300">
                       {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -175,7 +184,7 @@ const Chat = ({ chatInfo, projectData }) => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Type your message here..."
+              placeholder="message here..."
               rows="1"
               required
             />
@@ -202,14 +211,14 @@ const Chat = ({ chatInfo, projectData }) => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Sending
+                ...ing
               </div>
             ) : (
               <div className="flex items-center">
                 <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
-                Send
+                Send..
               </div>
             )}
           </button>
@@ -230,8 +239,8 @@ Chat.propTypes = {
       id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     }),
   }),
-  projectData: PropTypes.shape({
-    student_lead: PropTypes.shape({
+  patientData: PropTypes.shape({
+    patient: PropTypes.shape({
       user_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
       supervisor: PropTypes.shape({
         user_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),

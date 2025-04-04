@@ -46,8 +46,8 @@ const Header = () => {
                 alt="Project Management" 
                 className="h-8 w-8"
               />
-              <span className="ml-2 text-xl font-bold text-gray-800 hidden md:inline">
-                WPMS
+              <span className="ml-2 text-md font-bold text-gray-800 hidden md:inline">
+                TiBERbu
               </span>
             </Link>
             

@@ -3,18 +3,18 @@ import { useNavigate } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
 import axios from "axios";
 import Header from "../components/Header";
-// import SupervisorStudent from "./SupervisorStudent";
 import Footer from "../components/Footer";
 import ViewProfile from "./Profile/ViewProfile";
 import Sidebar from "../components/Sidebar";
 import PhysicianPatient from "../Physician/PhysicianPatient";
 import ViewIllnesses from "../Illness/ViewIllnesses";
-// import Chat from "../pages/Chat/Chat";
+import Chat from "../pages/Chat/Chat";
+import PhysicianIllness from "../Physician/PhysicianIllness";
 
 const HomePage = () => {
   const navigate = useNavigate();
   const { authTokens, user } = useContext(AuthContext);
-  const [projectData, setProjectData] = useState(null);
+  const [patientData, setPatientData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -22,8 +22,9 @@ const HomePage = () => {
   // Create refs for each section
   const chatRef = useRef(null);
   const headerRef = useRef(null);
-  const patientstRef = useRef(null);
+  const patientsRef = useRef(null);
   const dashboardRef = useRef(null);
+  const illnessRef = useRef(null);
 
   // State to manage sidebar visibility
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -57,10 +58,13 @@ const HomePage = () => {
         ref = headerRef;
         break;
       case "patients":
-        ref = patientstRef;
+        ref = patientsRef;
         break;
       case "dashboard":
         ref = dashboardRef;
+        break;
+      case "illness":
+        ref = illnessRef;
         break;
       default:
         break;
@@ -77,16 +81,16 @@ const HomePage = () => {
 
   // Fetch project data
   useEffect(() => {
-    const fetchProject = async () => {
+    const fetchIllness = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8000/user/view_project/${user.user_id}/`,
+          `http://localhost:8000/user/patient/${user.user_id}/`,
           {
             headers: { Authorization: `Bearer ${authTokens.access}` },
           }
         );
-        setProjectData(response.data);
-        console.log("Project info: ", response.data)
+        setPatientData(response.data);
+        // console.log("This is Patient info: ", response.data?.patient?.physician?.user.id)
       } catch (err) {
         err
         setError("Please create a profile to view more details");
@@ -95,8 +99,8 @@ const HomePage = () => {
       }
     };
 
-    if (user.role === "student") {
-      fetchProject();
+    if (user.role === "patient") {
+      fetchIllness();
     } else {
       setLoading(false);
     }
@@ -203,7 +207,7 @@ const HomePage = () => {
                       onClick={() => scrollToSection("project")}
                       className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 px-2 py-1 rounded"
                     >
-                      Project
+                      Illness
                     </button>
                   </div>
                 </div>}
@@ -213,30 +217,32 @@ const HomePage = () => {
 
           {/* PATIENT LIST VIEW FOR ILLNESSES SECTION */}
           {user.role === "patient" && (
-            <section className="mb-8" ref={patientstRef}>
+            <section className="mb-8" ref={illnessRef}>
               <ViewIllnesses />
             </section>
           )}
+
+          {/* CHAT SECTION */}
+          {user.role === "patient" && (
+            <section className="mb-8" ref={chatRef}>
+              <Chat patientData= {patientData} UserId={user.user_id} />
+            </section>
+          )}
+
           {/* PATIENT LIST VIEW FOR PHYSICIAN SECTION */}
           {user.role === "physician" && (
-            <section className="mb-8" ref={patientstRef}>
+            <section className="mb-8" ref={patientsRef}>
               <PhysicianPatient />
             </section>
           )}
 
-          {/* CHAT SECTION
-          {user.role === "student" && (
-            <section className="mb-8" ref={chatRef}>
-              <Chat projectData={projectData} UserId={user.user_id} />
+          {/* ILLNESS LIST VIEW FOR PHYSICIAN SECTION */}
+          {user.role === "physician" && (
+            <section className="mb-8" ref={illnessRef}>
+              <PhysicianIllness />
             </section>
-          )} */}
+          )}
 
-          {/* Supervisor Section
-          {user.role === "supervisor" && (
-            <section className="mb-8">
-              <SupervisorStudent supervisorId={user.supervisorId} />
-            </section>
-          )} */}
 
           {/* Footer */}
           <hr className="border-t-2 my-6 border-gray-200" />

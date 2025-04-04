@@ -56,33 +56,48 @@ class PhysicianSerializer(serializers.ModelSerializer):
     
     
 # PatientIllness serializer
+    
+
+
 class PatientIllnessSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    physician = serializers.PrimaryKeyRelatedField(queryset=Physician.objects.all())  
     
     class Meta:
         model = PatientIllness
-        fields = ['user_id', 'user', 'title', 'description']
+        fields = ['user_id', 'user', 'title', 'description', 'physician', 'created_at']
         extra_kwargs = {
             'user_id': {'read_only': True}
         }
-    
+
     def create(self, validated_data):
         """Handle creation of new illness record"""
         user = self.context['request'].user
-        return PatientIllness.objects.create(
+        physician = validated_data.pop('physician')  # Extract physician object, no need for get()
+
+        # Create the PatientIllness instance with physician
+        illness = PatientIllness.objects.create(
             user=user,
+            physician=physician,  # Directly assign the physician object
             title=validated_data.get('title', ''),
-            description=validated_data.get('description', '')
+            description=validated_data.get('description', ''),
+            created_at=validated_data.get('created_at', None)
         )
-    
+        return illness
+
     def update(self, instance, validated_data):
         """Handle updating existing illness record"""
+        physician = validated_data.pop('physician', None)  # Get physician if provided
+
+        if physician:
+            instance.physician = physician  # Directly assign the physician object
+
         instance.title = validated_data.get('title', instance.title)
         instance.description = validated_data.get('description', instance.description)
+        instance.created_at = validated_data.get('created_at', instance.created_at)
         instance.save()
         return instance
-    
-    
+
     
 class PatientSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)

@@ -35,12 +35,15 @@ urlpatterns = [
     path('physician/<int:user_id>/', views.PhysicianProfileView.as_view(), name='physician'),
 
     # A list of patients belonging to a specific physician
-    path('physician-patient/<int:user_id>/', views.PhysicianPatientDetailView.as_view(), name='physician-patient'),
+    path('physician-patient/<int:user_id>/patients/', views.PhysicianPatientsListView.as_view(), name='physician-patient'),
+    
+    # A list of illness being attended to by a specific physician
+    path('physician-illness/<int:user_id>/illness/', views.PhysicianIllnessListView.as_view(), name='physician-illness'),
     
     
-    # URls for creating, updating and viewing.
+    # URls for creating, updating and viewing illness.
     path('create/illness/', views.PatientIllnessCreateView.as_view(), name='illness-create'),
     path('update/illness/<int:user_id>/', views.PatientIllnessUpdateView.as_view(), name='illness-update'),
-    path('illness/patient/<int:user_id>/', views.PatientIllnessListView.as_view(), name='illness-list'),
-
-]
+    
+    path('patients/<int:patient_id>/illnesses/', views.IllnessListView.as_view(), name='patient-illness-list'),
+]   

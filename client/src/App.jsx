@@ -21,6 +21,10 @@ import Chat from './pages/Chat/Chat';
 import ViewProfile from './pages/Profile/ViewProfile';
 import PhysicianPatient from './Physician/PhysicianPatient';
 import CreateIllness from './Illness/CreateIllness';
+import UpdateIllness from './Illness/UpdateIllness';
+import PhysicianIllness from './Physician/PhysicianIllness';
+import ViewIllnesses from './Illness/ViewIllnesses';
+import PatientForPhysician from './Patient/PatientForPhysician';
 
 function App() {
   return (
@@ -34,13 +38,25 @@ function App() {
 
             {/* Profile */}
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-            <Route path="/view_profile" element={<PrivateRoute><ViewProfile /></PrivateRoute>} />
+            <Route path="/view_profile/:user_id" element={<PrivateRoute><ViewProfile /></PrivateRoute>} />
             <Route path="/update_profile/:user_id" element={<PrivateRoute><ProfileUpdate /></PrivateRoute>} />
+
+            {/* ONE PATIENT */}
+            <Route path="/patient/:user_id" element={<PrivateRoute><PatientForPhysician /></PrivateRoute>} />
             {/* List of Patients for a specific Physician */}
             <Route path="/physician_patient/:user_id" element={<PrivateRoute><PhysicianPatient /></PrivateRoute>} />
 
+            {/* List of illness attended for a specific Physician */}
+            <Route path="/physician_illness/:user_id" element={<PrivateRoute><PhysicianIllness /></PrivateRoute>} />
+
             {/* Illness routes */}
+            {/* view */}
+            <Route path="/patients/:user_id/illnesses" element={<PrivateRoute><ViewIllnesses /></PrivateRoute>} />
+            {/* add */}
             <Route path="/add_illness" element={<PrivateRoute><CreateIllness /></PrivateRoute>} />
+
+            {/* update */}
+            <Route path="/update_illness/:illness_id" element={<PrivateRoute>< UpdateIllness/></PrivateRoute>} />
 
 
             {/* chat */}

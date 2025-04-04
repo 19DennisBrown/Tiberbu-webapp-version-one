@@ -9,6 +9,8 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListAPIView
+from rest_framework.exceptions import PermissionDenied
 from django.http import JsonResponse, HttpResponse
 from rest_framework import permissions
 from rest_framework.response import Response
@@ -210,12 +212,14 @@ class PhysicianProfileView(RetrieveAPIView):
                     'last_name': physician.last_name,
                     'specialisation': physician.specialisation,
                     'user': {
-                        'email': physician.user.email
+                        'email': physician.user.email,
+                        'id': physician.user.id,
                     }
                 },
                 'user': {
                     'username': physician.user.username,
-                    'email': physician.user.email
+                    'email': physician.user.email,
+                    'id': physician.user.id,
                 }
             }
             
@@ -226,7 +230,8 @@ class PhysicianProfileView(RetrieveAPIView):
                     'first_name': p.first_name,
                     'last_name': p.last_name,
                     'user': {
-                        'username': p.user.username
+                        'username': p.user.username,
+                        'id': physician.user.id,
                     }
                 } for p in patients]
             
@@ -258,15 +263,21 @@ class PatientProfileView(RetrieveAPIView):
                     'physician': {
                         'first_name': patient.physician.first_name,
                         'last_name': patient.physician.last_name,
-                        'specialisation': patient.physician.specialisation
+                        'specialisation': patient.physician.specialisation,
+                        'user':{
+                            'username': patient.physician.user.username,
+                            'id': patient.physician.user.id,
+                        }
                     } if patient.physician else None,
                     'user': {
-                        'email': patient.user.email
+                        'email': patient.user.email,
+                        'id': patient.user.id,
                     }
                 },
                 'user': {
                     'username': patient.user.username,
-                    'email': patient.user.email
+                    'email': patient.user.email,
+                    'id': patient.user.id,
                 }
             }
             
@@ -319,71 +330,14 @@ class UpdatePatientAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     
-# ALIST OF PATIENTS BELONGING TO A GIVEN PHYSICIAN.
-
-class PhysicianPatientDetailView(RetrieveAPIView):
-    # authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
-    queryset = Physician.objects.all()
-    serializer_class = PhysicianSerializer
-    lookup_field = "user_id"
-
-    def retrieve(self, request, *args, **kwargs):
-        user_id = self.kwargs.get("user_id")  # Extract physician's user_id from URL
-
-        try:
-            # Get physician by user_id
-            physician = Physician.objects.get(user_id=user_id)
-            
-            # Get patients who selected this physician
-            patients = Patient.objects.filter(physician=physician).select_related(
-                'user', 'patient_illness'
-            )
-            
-            # Serialize physician data
-            physician_data = PhysicianSerializer(physician).data
-            
-            # Create patient list with illnesses
-            patient_list = []
-            for patient in patients:
-                illness_data = None
-                if hasattr(patient, 'patient_illness'):
-                    illness_data = PatientIllnessSerializer(patient.patient_illness).data
-                
-                patient_list.append({
-                    "user_id": patient.user_id,
-                    "first_name": patient.first_name,
-                    "last_name": patient.last_name,
-                    "age_category": patient.age_category,
-                    "illness": illness_data
-                })
-            
-            # Combine physician details with patient list
-            response_data = {
-                "physician": physician_data,
-                "patients": patient_list
-            }
-            
-            return Response(response_data, status=status.HTTP_200_OK)
-
-        except ObjectDoesNotExist:
-            return Response(
-                {"error": "Physician not found"}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+# A LIST OF PATIENTS BELONGING TO A GIVEN PHYSICIAN.
 
 
 # ILLNESS VIEWS TO CREATE, UPDATE AND VIEW
 class PatientIllnessCreateView(CreateAPIView):
     serializer_class = PatientIllnessSerializer
     permission_classes = [IsAuthenticated]
-    
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -397,15 +351,57 @@ class PatientIllnessUpdateView(RetrieveUpdateAPIView):
         # Ensure users can only update their own records
         return self.queryset.get(user=self.request.user)
     
-from rest_framework.generics import ListAPIView
-from rest_framework.exceptions import PermissionDenied
 
-class PatientIllnessListView(ListAPIView):
+  
+# List of illness for Speficic patient
+class IllnessListView(ListAPIView):
+   
     serializer_class = PatientIllnessSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        user_id = self.kwargs.get('user_id')
-        if user_id != str(self.request.user.id):
+        patient_id = self.kwargs.get('patient_id')
+        
+        # Patients can only view their own records
+        if not self.request.user.is_staff and str(self.request.user.id) != str(patient_id):
             raise PermissionDenied("You can only view your own illness records")
-        return PatientIllness.objects.filter(user_id=user_id)
+            
+        return PatientIllness.objects.filter(user_id=patient_id).order_by('-created_at')
+    
+ 
+
+class PhysicianPatientsListView(ListAPIView):
+    """
+    Get all patients assigned to a specific physician (using physician's user_id)
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = PatientSerializer
+
+    def get_queryset(self):
+        """
+        Fetch patients assigned to a physician specified by user_id in the URL.
+        """
+        physician_user_id = self.kwargs.get("user_id")  # Get user_id from URL
+
+        try:
+            physician = Physician.objects.get(user_id=physician_user_id)
+        except Physician.DoesNotExist:
+            return Patient.objects.none()  # Return empty queryset if physician not found
+
+        # Update the prefetch_related to 'patient_illness' or correct field name
+        return Patient.objects.filter(physician=physician).select_related("user", "physician")
+
+class PhysicianIllnessListView(ListAPIView):
+    
+    # Getting all the ilnesses assigned to a specific physician
+    permission_classes = [IsAuthenticated]
+    serializer_class = PatientIllnessSerializer
+    
+    def get_queryset(self):
+        physician_user_id = self.kwargs.get("user_id")
+        
+        try:
+            physician = Physician.objects.get(user_id=physician_user_id)
+        except Physician.DoesNotExist:
+            return PatientIllness.objects.none()
+        return PatientIllness.objects.filter(physician = physician).select_related("user", "physician")

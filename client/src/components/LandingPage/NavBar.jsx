@@ -101,7 +101,7 @@ const Navbar = () => {
             </button>
           </div>
         </div>
-        <div className="px-2 pt-2 pb-3 space-y-1">
+        <div className="px-2 pt-2 pb-3 space-y-1 bg-black/75 min-h-screen">
           {navItems.map((item) => (
             <Link
               key={item.id}

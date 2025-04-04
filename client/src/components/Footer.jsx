@@ -6,7 +6,7 @@ const Footer = () => {
     <footer className="bg-gray-800 w-full mt-8 font-semibold text-white py-4">
       <div className="container mx-auto text-center">
         <p className="text-sm">
-          &copy; {currentYear} wpms. All rights reserved.
+          &copy; {currentYear} tiBERbu. All rights reserved.
         </p>
 
       </div>
