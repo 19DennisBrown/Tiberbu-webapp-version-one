@@ -239,7 +239,8 @@ class PhysicianProfileView(RetrieveAPIView):
             
         except Physician.DoesNotExist:
             raise NotFound("Physician not found")
-
+        
+        
 class PatientProfileView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     
@@ -281,21 +282,29 @@ class PatientProfileView(RetrieveAPIView):
                 }
             }
             
-            # Add illness data if available
-            try:
-                illness = PatientIllness.objects.get(user_id=user_id)
-                response_data['patient_illness'] = {
-                    'title': illness.title,
-                    'description': illness.description
-                }
-            except PatientIllness.DoesNotExist:
-                pass
+            # Get all illnesses for this patient
+            illnesses = PatientIllness.objects.filter(user_id=user_id).order_by('-created_at')
+            if illnesses.exists():
+                response_data['patient_illnesses'] = [
+                    {
+                        'title': illness.title,
+                        'description': illness.description,
+                        'created_at': illness.created_at,
+                        'physician': {
+                            'first_name': illness.physician.first_name,
+                            'last_name': illness.physician.last_name
+                        } if illness.physician else None
+                    }
+                    for illness in illnesses
+                ]
                 
             return Response(response_data)
             
         except Patient.DoesNotExist:
             raise NotFound("Patient not found")
         
+        
+            
 # UPDATING PROFILE DATA
 # FOR PATIENT:
 class UpdatePatientAPIView(APIView):
@@ -337,8 +346,16 @@ class UpdatePatientAPIView(APIView):
 class PatientIllnessCreateView(CreateAPIView):
     serializer_class = PatientIllnessSerializer
     permission_classes = [IsAuthenticated]
+    queryset = PatientIllness.objects.all()
+
+    def get_serializer_context(self):
+        """Add request to serializer context"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def perform_create(self, serializer):
+        """Automatically assigns the current user as patient"""
         serializer.save(user=self.request.user)
 
 class PatientIllnessUpdateView(RetrieveUpdateAPIView):
@@ -355,7 +372,6 @@ class PatientIllnessUpdateView(RetrieveUpdateAPIView):
   
 # List of illness for Speficic patient
 class IllnessListView(ListAPIView):
-   
     serializer_class = PatientIllnessSerializer
     permission_classes = [IsAuthenticated]
     
@@ -371,16 +387,12 @@ class IllnessListView(ListAPIView):
  
 
 class PhysicianPatientsListView(ListAPIView):
-    """
-    Get all patients assigned to a specific physician (using physician's user_id)
-    """
+   
     permission_classes = [IsAuthenticated]
     serializer_class = PatientSerializer
 
     def get_queryset(self):
-        """
-        Fetch patients assigned to a physician specified by user_id in the URL.
-        """
+        
         physician_user_id = self.kwargs.get("user_id")  # Get user_id from URL
 
         try:
@@ -405,3 +417,5 @@ class PhysicianIllnessListView(ListAPIView):
         except Physician.DoesNotExist:
             return PatientIllness.objects.none()
         return PatientIllness.objects.filter(physician = physician).select_related("user", "physician")
+    
+

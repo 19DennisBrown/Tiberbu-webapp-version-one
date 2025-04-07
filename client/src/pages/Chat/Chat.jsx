@@ -249,4 +249,51 @@ Chat.propTypes = {
   }),
 };
 
+// prop types
+Chat.propTypes = {
+  chatInfo: PropTypes.shape({
+    supervisor: PropTypes.shape({
+      user: PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      }),
+    }),
+    user: PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    }),
+  }),
+  patientData: PropTypes.shape({
+    patient: PropTypes.shape({
+      user: PropTypes.shape({
+        id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        email: PropTypes.string,
+      }),
+      physician: PropTypes.shape({
+        user: PropTypes.shape({
+          id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        }),
+        first_name: PropTypes.string,
+        last_name: PropTypes.string,
+      }),
+      first_name: PropTypes.string,
+      last_name: PropTypes.string,
+      age_category: PropTypes.string,
+      user_id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    }),
+    patient_illness: PropTypes.shape({
+      title: PropTypes.string,
+      description: PropTypes.string,
+    }),
+    user: PropTypes.shape({
+      email: PropTypes.string,
+      username: PropTypes.string,
+    }),
+  }),
+};
+
+Chat.defaultProps = {
+  chatInfo: null,
+  patientData: null,
+};
+
+
 export default Chat;

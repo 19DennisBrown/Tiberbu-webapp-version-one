@@ -10,6 +10,7 @@ import PhysicianPatient from "../Physician/PhysicianPatient";
 import ViewIllnesses from "../Illness/ViewIllnesses";
 import Chat from "../pages/Chat/Chat";
 import PhysicianIllness from "../Physician/PhysicianIllness";
+import ViewInsuranceDocs from '../pages/insurance/ViewInsuranceDocs'
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -29,6 +30,16 @@ const HomePage = () => {
   // State to manage sidebar visibility
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Tab styles configuration
+  const tabStyles = {
+    container: "flex border-b border-gray-200 mb-6 overflow-x-auto",
+    tab: {
+      base: "px-4 py-2 text-sm font-medium whitespace-nowrap",
+      inactive: "text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300",
+      active: "text-blue-600 border-b-2 border-blue-500",
+    }
+  };
 
   // Check for mobile view
   useEffect(() => {
@@ -90,7 +101,6 @@ const HomePage = () => {
           }
         );
         setPatientData(response.data);
-        // console.log("This is Patient info: ", response.data?.patient?.physician?.user.id)
       } catch (err) {
         err
         setError("Please create a profile to view more details");
@@ -182,6 +192,68 @@ const HomePage = () => {
             </div>
           </section>
 
+          {/* Navigation Tabs */}
+          <div className={tabStyles.container}>
+            <button
+              onClick={() => scrollToSection("dashboard")}
+              className={`${tabStyles.tab.base} ${
+                activeSection === "dashboard" ? tabStyles.tab.active : tabStyles.tab.inactive
+              }`}
+            >
+              Dashboard
+            </button>
+            
+            {user.role === "patient" && (
+              <>
+                <button
+                  onClick={() => scrollToSection("illness")}
+                  className={`${tabStyles.tab.base} ${
+                    activeSection === "illness" ? tabStyles.tab.active : tabStyles.tab.inactive
+                  }`}
+                >
+                  My Illnesses
+                </button>
+                <button
+                  onClick={() => scrollToSection("chat")}
+                  className={`${tabStyles.tab.base} ${
+                    activeSection === "chat" ? tabStyles.tab.active : tabStyles.tab.inactive
+                  }`}
+                >
+                  Messages
+                </button>
+                <button
+                  onClick={() => scrollToSection("illness")}
+                  className={`${tabStyles.tab.base} ${
+                    activeSection === "insurance" ? tabStyles.tab.active : tabStyles.tab.inactive
+                  }`}
+                >
+                  Insurance
+                </button>
+              </>
+            )}
+            
+            {user.role === "physician" && (
+              <>
+                <button
+                  onClick={() => scrollToSection("patients")}
+                  className={`${tabStyles.tab.base} ${
+                    activeSection === "patients" ? tabStyles.tab.active : tabStyles.tab.inactive
+                  }`}
+                >
+                  My Patients
+                </button>
+                <button
+                  onClick={() => scrollToSection("illness")}
+                  className={`${tabStyles.tab.base} ${
+                    activeSection === "illness" ? tabStyles.tab.active : tabStyles.tab.inactive
+                  }`}
+                >
+                  Patient Illnesses
+                </button>
+              </>
+            )}
+          </div>
+
           {/* Dashboard Overview Section */}
           <section className="mb-8" ref={dashboardRef}>
             <div className="bg-white rounded-lg shadow p-6">
@@ -204,7 +276,7 @@ const HomePage = () => {
                       Chat
                     </button>
                     <button 
-                      onClick={() => scrollToSection("project")}
+                      onClick={() => scrollToSection("illness")}
                       className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-800 px-2 py-1 rounded"
                     >
                       Illness
@@ -221,11 +293,17 @@ const HomePage = () => {
               <ViewIllnesses />
             </section>
           )}
+          {/* PATIENT LIST VIEW FOR INSURANCE DOCS SECTION */}
+          {user.role === "patient" && (
+            <section className="mb-8" ref={illnessRef}>
+              <ViewInsuranceDocs />
+            </section>
+          )}
 
           {/* CHAT SECTION */}
           {user.role === "patient" && (
             <section className="mb-8" ref={chatRef}>
-              <Chat patientData= {patientData} UserId={user.user_id} />
+              <Chat patientData={patientData} UserId={user.user_id} />
             </section>
           )}
 
@@ -242,7 +320,6 @@ const HomePage = () => {
               <PhysicianIllness />
             </section>
           )}
-
 
           {/* Footer */}
           <hr className="border-t-2 my-6 border-gray-200" />

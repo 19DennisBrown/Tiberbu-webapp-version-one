@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     # apps
     'userauth',
     'chat',
+    'insurance',
 
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',

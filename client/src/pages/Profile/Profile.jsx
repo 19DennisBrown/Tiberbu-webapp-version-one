@@ -101,9 +101,9 @@ const Profile = () => {
                 <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     {/* Header Section */}
                     <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white">
-                        <h1 className="text-2xl font-bold">Create Your Profile </h1>
+                        <h1 className="text-2xl font-bold"> {`Create Your Profile ${user.role == "physician" ? "Doc" : "Patient"}`} </h1>
                         <p className="text-blue-100">
-                            {user?.role === "supervisor" ? 
+                            {user?.role === "physician" ? 
                                 "Complete your physician profile" : 
                                 "Set up your patient profile"}
                         </p>

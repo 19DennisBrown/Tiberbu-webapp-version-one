@@ -26,6 +26,11 @@ import PhysicianIllness from './Physician/PhysicianIllness';
 import ViewIllnesses from './Illness/ViewIllnesses';
 import PatientForPhysician from './Patient/PatientForPhysician';
 
+import ViewInsuranceDocs from './pages/insurance/ViewInsuranceDocs';
+import AddInsuranceDoc from './pages/insurance/AddInsuranceDoc'
+import ViewInsuranceDetails from './pages/insurance/ViewInsuranceDetails';
+import DeleteInsurance from './pages/insurance/DeleteInsurance';
+
 function App() {
   return (
     <div className="App">
@@ -56,8 +61,17 @@ function App() {
             <Route path="/add_illness" element={<PrivateRoute><CreateIllness /></PrivateRoute>} />
 
             {/* update */}
-            <Route path="/update_illness/:illness_id" element={<PrivateRoute>< UpdateIllness/></PrivateRoute>} />
+            <Route path="/update_illness/:illnessId" element={<PrivateRoute>< UpdateIllness/></PrivateRoute>} />
 
+            {/* insurance routes */}
+            {/* create */}
+            <Route path="/add_doc" element={<PrivateRoute>< AddInsuranceDoc /></PrivateRoute>} />
+            {/* view */}
+            <Route path="/view_doc/:user_id" element={<PrivateRoute>< ViewInsuranceDocs /></PrivateRoute>} />
+            {/* detailed view */}
+            <Route path="/view_one_doc/:fileId" element={<PrivateRoute>< ViewInsuranceDetails /></PrivateRoute>} />
+            {/* delete view */}
+            <Route path="/insurance_delete/:fileId" element={<PrivateRoute>< DeleteInsurance /></PrivateRoute>} />
 
             {/* chat */}
             <Route path="/chat/:user_id" element={<PrivateRoute><Chat /></PrivateRoute>} />

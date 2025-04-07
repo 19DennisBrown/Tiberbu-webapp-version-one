@@ -105,7 +105,7 @@ const PhysicianPatient = () => {
               <div
                 key={patient.user_id}
                 className="bg-white p-4 rounded-lg shadow flex items-center justify-between hover:bg-gray-100 transition"
-                onClick={() => navigate(`/patients/${patient.user_id}`)}
+                onClick={() => navigate(`/patient/${patient.user_id}`)}
               >
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">
